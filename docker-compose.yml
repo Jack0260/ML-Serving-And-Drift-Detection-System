@@ -1,0 +1,43 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - SUPABASE_URL=${VITE_SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
+    depends_on:
+      - mlflow
+    networks:
+      - ml-ops
+
+  mlflow:
+    image: python:3.12-slim
+    ports:
+      - "5001:5001"
+    command: >
+      bash -c "pip install mlflow psycopg2-binary &&
+      mlflow server --host 0.0.0.0 --port 5001 --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlflow/artifacts"
+    volumes:
+      - mlflow_data:/mlflow
+    networks:
+      - ml-ops
+
+  dashboard:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+    networks:
+      - ml-ops
+
+volumes:
+  mlflow_data:
+
+networks:
+  ml-ops:
+    driver: bridge
